@@ -10,7 +10,7 @@ class Ui_Dialog(object):
         font.setPointSize(10)
         Dialog.setFont(font)
         icon = QtGui.QIcon()
-        icon.addFile("./icons/icon.png", QtCore.QSize(), QtGui.QIcon.Normal,
+        icon.addFile("../icons/icon.png", QtCore.QSize(), QtGui.QIcon.Normal,
                      QtGui.QIcon.Off)
         Dialog.setWindowIcon(icon)
         self.gridLayout = QtWidgets.QGridLayout(Dialog)

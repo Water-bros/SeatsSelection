@@ -9,7 +9,7 @@ class Ui_MainWindow(object):
         font.setFamily("OPlusSans 3.0")
         font.setPointSize(10)
         icon = QtGui.QIcon()
-        icon.addFile("./icons/icon.png", QtCore.QSize(), QtGui.QIcon.Normal,
+        icon.addFile("../icons/icon.png", QtCore.QSize(), QtGui.QIcon.Normal,
                      QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setFont(font)
