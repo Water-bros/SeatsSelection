@@ -108,6 +108,7 @@ class Ui_Dialog(object):
         self.gridLayout_7.setObjectName("gridLayout_7")
         self.listWidget = QtWidgets.QListWidget(self.widget_4)
         self.listWidget.setObjectName("listWidget")
+        self.listWidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.gridLayout_7.addWidget(self.listWidget, 1, 0, 2, 1)
         self.pushButton = QtWidgets.QPushButton(self.widget_4)
         self.pushButton.setObjectName("pushButton")

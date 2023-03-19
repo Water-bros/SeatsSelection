@@ -16,7 +16,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowOpacity(0.98)
         MainWindow.setStyleSheet(
             """
-            QPushButton {
+            QWidget#widget_2>QPushButton {
                 border-radius: 10px;
                 width: 150px;
                 height: 75px;
@@ -24,7 +24,7 @@ class Ui_MainWindow(object):
                 font: 57 12pt "OPlusSans 3.0";
             }
             
-            QPushButton:hover {
+            QWidget#widget_2>QPushButton:hover {
                 background-color: rgb(185, 255, 255)
             }
             
