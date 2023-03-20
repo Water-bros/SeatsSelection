@@ -24,7 +24,8 @@ import configparser
 9.根据设置选择座位
 10.导出座位表
 11.滚动展示
-2023.03.20 14:04 Water_bros
+12.判断选择是否合规
+2023.03.20 17:05 Water_bros
 """
 import_table_status = False
 names = []
@@ -214,6 +215,9 @@ class MainUI(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.data = []
+        self.labels = []
+        self.steps = []
+        self.steps_backup = self.steps
         self.setup()
         self.setupUi(self)
         self.action01.triggered.connect(self.import_table)
@@ -225,13 +229,41 @@ class MainUI(QtWidgets.QMainWindow, Ui_MainWindow):
         # self.action07.triggered.connect()
         # self.action08.triggered.connect()
 
-        # self.pushButton.clicked.connect()
-        # self.pushButton_2.clicked.connect()
-        # self.pushButton_3.clicked.connect()
-        # self.pushButton_4.clicked.connect()
+        self.pushButton.clicked.connect(self.reset)
+        self.pushButton_2.clicked.connect(self.random_choice)
+        self.pushButton_3.clicked.connect(self.cancel)
+        self.pushButton_4.clicked.connect(self.front_move)
         self.action_help.triggered.connect(self.get_help)
 
         self.map = []
+        self.clean_map = []
+
+    def changeEvent(self, event):
+        if event.type() == QtCore.QEvent.WindowStateChange:
+            if self.isMaximized():
+                self.widget.setStyleSheet(
+                    """
+                    QWidget {
+                        border: 8px solid black;
+                    }
+                    
+                    QLabel {
+                            border: 4px solid black;
+                            font: 57 25pt "OPlusSans 3.0";
+                        }
+                    """)
+            else:
+                self.widget.setStyleSheet(
+                    """
+                    QWidget {
+                        border: 5px solid black;
+                    }
+
+                    QLabel {
+                            border: 3px solid black;
+                            font: 57 15pt "OPlusSans 3.0";
+                        }
+                    """)
 
     def setup(self):
         try:
@@ -250,17 +282,25 @@ class MainUI(QtWidgets.QMainWindow, Ui_MainWindow):
             try:
                 wb = openpyxl.load_workbook(file)
                 ws = wb.active
-                for row in ws.values:
+                value = list(ws.values)
+                for row_num in range(len(value)):
                     row_ = []
-                    for i in row:
+                    row__ = []
+                    for j in range(len(value[row_num])):
+                        i = value[row_num][j]
                         if i:
                             names.append(i)
                             row_.append(i)
+                            row__.append(f"{row_num}-{j}")
                     if row_:
+                        row_.reverse()
                         self.map.append(row_)
+                        self.clean_map.append(row__)
                 import_table_status = True
+                self.map.reverse()
                 maps = self.map
                 self.comboBox.addItems(names)
+                self.show_table()
                 QMessageBox.information(self, "导入成功", "成功导入座位表", QMessageBox.Ok)
             except BadZipfile:
                 QMessageBox.critical(self, "导入错误", "导入的座位表文件有误，内容损坏或不是Excel文件", QMessageBox.Ok)
@@ -279,7 +319,58 @@ class MainUI(QtWidgets.QMainWindow, Ui_MainWindow):
         adm.exec_()
 
     def show_table(self):
-        pass
+        print(self.map)
+        col_lens = []
+        for rows in self.map:
+            col_len = len(rows)
+            col_lens.append(col_len)
+        max_col = max(col_lens)
+        for row in range(len(self.map)):
+            col_labels = []
+            for col in range(max_col):
+                label = QtWidgets.QLabel(self.widget)
+                label.setAlignment(QtCore.Qt.AlignCenter)
+                self.gridLayout_4.addWidget(label, row, col, 1, 1)
+                col_labels.append(label)
+                try:
+                    label.setText(self.map[row][col])
+                except IndexError:
+                    pass
+            self.labels.append(col_labels)
+
+    def random_choice(self):
+        sel = QMessageBox.question(self, "确认身份", "请先在上方选择您的姓名，并确认是您本人操作",
+                                   QMessageBox.Yes | QMessageBox.No)
+        if sel:
+            flag = True
+            while flag:
+                ran_pos = random.choice(self.clean_map)
+                row_num = ran_pos[0]
+                col_num = ran_pos[2]
+                # 选择判断是否合规
+        else:
+            pass
+
+    def reset(self):
+        sel = QMessageBox.question(self, "确认重置", "请问是否重置所有操作？", QMessageBox.Yes | QMessageBox.No)
+        if sel:
+            self.clean_map = []
+        else:
+            pass
+
+    def cancel(self):
+        sel = QMessageBox.question(self, "确认撤销", "请问是否回退至上一步操作？", QMessageBox.Yes | QMessageBox.No)
+        if sel:
+            QMessageBox.information(self, "嘻嘻", "作者很懒，没有机会撤销捏", QMessageBox.Ok)
+        else:
+            pass
+
+    def front_move(self):
+        sel = QMessageBox.question(self, "确认还原", "请问是否还原至下一步操作？", QMessageBox.Yes | QMessageBox.No)
+        if sel:
+            QMessageBox.information(self, "嘻嘻", "作者很懒，没有机会还原捏", QMessageBox.Ok)
+        else:
+            pass
 
 
 class SetConfig:
