@@ -7,22 +7,28 @@ from main_ui import *
 from admin import *
 from set import *
 import sys
+import random
 import openpyxl
 import configparser
 
 """
 未完成：
-1.配置导入导出
-2.配置写入ini文件，读取ini文件
-3.设置座位
+1.配置导入导出 完成
+2.配置写入ini文件，读取ini文件 完成
+3.设置座位 完成
 4.设置禁止连坐分组 完成
-5.相关特殊设置选项
+5.相关特殊设置选项 完成
 6.后门设置（惊喜
 7.彩蛋
-2023.03.19 18:13 Water_bros
+8.选择座位
+9.根据设置选择座位
+10.导出座位表
+11.滚动展示
+2023.03.20 14:04 Water_bros
 """
 import_table_status = False
 names = []
+maps = None
 
 
 class AdminUI(QDialog, Admin_Ui_Dialog):
@@ -79,6 +85,7 @@ class SelfDefineUI(QDialog, Ui_Dialog):
         self.table_row = 0
         self.get_group_num = 0
         self.groups = []
+        self.data = []
         self.setupUi(self)
         self.add_names()
         self.pushButton.clicked.connect(self.add_group)
@@ -89,7 +96,11 @@ class SelfDefineUI(QDialog, Ui_Dialog):
         self.pushButton_6.clicked.connect(self.import_set)
         self.pushButton_7.clicked.connect(self.add_in_group)
         self.checkBox_4.toggled.connect(self.all_random_mode)
-        self.checkBox_5.toggled.connect(self.irregular_set_mode)
+        if self.import_table_status:
+            self.checkBox_5.toggled.connect(
+                lambda: QMessageBox.information(self, "不规则行列设置", "已经通过导入的座位表自动设置", QMessageBox.Ok))
+        else:
+            self.checkBox_5.toggled.connect(self.irregular_set_mode)
         self.listWidget.itemClicked.connect(self.get_item)
         self.tableWidget.cellPressed.connect(self.get_group)
 
@@ -118,6 +129,8 @@ class SelfDefineUI(QDialog, Ui_Dialog):
             QMessageBox.critical(self, "配置错误", "未导入座位表", QMessageBox.Ok)
 
     def clear_groups(self):
+        self.table_row = 0
+        self.get_group_num = 0
         self.tableWidget.clearContents()
         self.tableWidget.setColumnCount(1)
         self.tableWidget.setRowCount(0)
@@ -136,20 +149,34 @@ class SelfDefineUI(QDialog, Ui_Dialog):
         front_back_change = self.checkBox.isChecked()
         centre_to_side = self.checkBox_2.isChecked()
         show_detail = self.checkBox_3.isChecked()
-        group = self.tableWidget
-        data = [row_num, column_num, all_random, front_back_change, centre_to_side, show_detail]
-
-        config = SetConfig("./set.dat", read_mode=False, data=data)
-        config.write_set()
+        group = self.groups
+        self.data = [row_num, column_num, all_random, front_back_change, centre_to_side, show_detail, group, maps]
+        SetConfig("./set.dat", read_mode=False, data=self.data)
+        QMessageBox.information(self, "保存设置", "设置文件保存成功", QMessageBox.Ok)
 
     def reset_set(self):
-        pass
+        self.spinBox.setValue(1)
+        self.spinBox_2.setValue(1)
+        self.checkBox_4.setChecked(True)
+        self.checkBox_4.setChecked(False)
+        self.groups = []
+        with open("./set.dat", "w", encoding="utf-8") as fn:
+            fn.write("")
 
     def import_set(self):
-        pass
+        file = QFileDialog.getOpenFileName(self, "导入设置", "", "Set Files(*.dat)")[0]
+        if file != "":
+            try:
+                con = SetConfig(file)
+                self.data = con.read_set()
+                QMessageBox.information(self, "导入成功", "导入的配置文件成功", QMessageBox.Ok)
+            except ValueError or configparser.Error:
+                QMessageBox.critical(self, "导入错误", "导入的配置文件有误，内容损坏或不是相符合的内容", QMessageBox.Ok)
+        else:
+            pass
 
     def set_help(self):
-        pass
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/Water-bros/SeatsSelection#readme"))
 
     def irregular_set_mode(self):
         if self.checkBox_5.isChecked():
@@ -177,7 +204,6 @@ class SelfDefineUI(QDialog, Ui_Dialog):
             self.groups[self.get_group_num].add(self.listWidget.currentItem().text())
         except IndexError:
             QMessageBox.critical(self, "分组错误", "未添加分组或未查找到正确分组", QMessageBox.Ok)
-        print(self.groups)
 
     def get_group(self, row, col):
         self.get_group_num = row
@@ -187,6 +213,7 @@ class SelfDefineUI(QDialog, Ui_Dialog):
 class MainUI(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
+        self.data = []
         self.setup()
         self.setupUi(self)
         self.action01.triggered.connect(self.import_table)
@@ -207,37 +234,45 @@ class MainUI(QtWidgets.QMainWindow, Ui_MainWindow):
         self.map = []
 
     def setup(self):
-        con = SetConfig("./set.dat")
-        con.read_set()
+        try:
+            con = SetConfig("./set.dat")
+            self.data = con.read_set()
+        except ValueError or configparser.Error:
+            with open("./set.dat", "w", encoding="utf-8") as fn:
+                fn.write("")
 
     def import_table(self):
         global import_table_status
         global names
+        global maps
         file = QFileDialog.getOpenFileName(self, "导入座位表", "", "Excel Files(*.xlsx ,*.xls)")[0]
-        try:
-            wb = openpyxl.load_workbook(file)
-            ws = wb.active
-            for row in ws.values:
-                row_ = []
-                for i in row:
-                    if i:
-                        names.append(i)
-                        row_.append(i)
-                if row_:
-                    self.map.append(row_)
-            print(self.map)
-            import_table_status = True
-            self.comboBox.addItems(names)
-            QMessageBox.information(self, "导入成功", "成功导入座位表", QMessageBox.Ok)
-        except BadZipfile:
-            QMessageBox.critical(self, "导入错误", "导入的座位表文件有误，内容损坏或不是Excel文件", QMessageBox.Ok)
-            import_table_status = False
+        if file != "":
+            try:
+                wb = openpyxl.load_workbook(file)
+                ws = wb.active
+                for row in ws.values:
+                    row_ = []
+                    for i in row:
+                        if i:
+                            names.append(i)
+                            row_.append(i)
+                    if row_:
+                        self.map.append(row_)
+                import_table_status = True
+                maps = self.map
+                self.comboBox.addItems(names)
+                QMessageBox.information(self, "导入成功", "成功导入座位表", QMessageBox.Ok)
+            except BadZipfile:
+                QMessageBox.critical(self, "导入错误", "导入的座位表文件有误，内容损坏或不是Excel文件", QMessageBox.Ok)
+                import_table_status = False
+        else:
+            pass
 
     def export_table(self):
         pass
 
     def get_help(self):
-        pass
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://github.com/Water-bros/SeatsSelection#readme"))
 
     def show_admin_ui(self):
         adm = AdminUI()
@@ -273,10 +308,18 @@ class SetConfig:
             t = fn.read()
             aes = AES.new(self.key, AES.MODE_ECB)
             decrypt_text = aes.decrypt(t).decode("utf-8")
+            de_text_list = list(decrypt_text)
+            de_text_list.reverse()
+            for i in range(len(de_text_list)):
+                if de_text_list[i] == "\0":
+                    de_text_list[i] = ""
+            de_text_list.reverse()
+            decrypt_text = "".join(de_text_list)
             self.config.read_string(decrypt_text)
 
     def ini_encrypt(self):
         with open(self.path, "w", encoding="utf-8") as fn:
+            self.write_set()
             self.config.write(fn)
         with open(self.path, "r", encoding="utf-8") as fn:
             t = fn.read().encode("utf-8")
@@ -286,12 +329,31 @@ class SetConfig:
             fn.write(encrypt_text)
 
     def read_set(self):
+        data = []
         secs = self.config.sections()
         for sec in secs:
-            print(self.config.options(sec))
+            data.append(self.config.items(sec))
+        return data
 
     def write_set(self):
-        pass
+        self.config.add_section("others")
+        self.config.add_section("basic_info")
+        self.config.add_section("special_section")
+        self.config.add_section("ban_group")
+        self.config.set("others", "irregular_mode", "0")
+        self.config.set("others", "maps", str(self.data[7]))
+        self.config.set("basic_info", "row", str(self.data[0]))
+        self.config.set("basic_info", "column", str(self.data[1]))
+        self.config.set("basic_info", "irregular_row", "0")
+        self.config.set("basic_info", "irregular_column", "0")
+        self.config.set("special_section", "all_random", str(self.data[2]))
+        self.config.set("special_section", "front_back_change", str(self.data[3]))
+        self.config.set("special_section", "centre_to_side", str(self.data[4]))
+        self.config.set("special_section", "show_detail", str(self.data[5]))
+        for i, j in enumerate(self.data[6]):
+            self.config.set("ban_group", f"g{j}", str(i))
+        else:
+            self.config.set("ban_group", "g0", "")
 
 
 if __name__ == '__main__':
